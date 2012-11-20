@@ -1,5 +1,5 @@
 CPP   = g++-4.7
-FLAGS	= -std=c++11 -g -Wall -Werror
+FLAGS	= -std=c++11 -g -Wall
 LIBS	= -pthread
 
 
