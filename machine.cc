@@ -5,8 +5,11 @@
 #include <cstring> // Sorry...
 #include <vector>
 #include <cmath>
+#include <atomic>
+#include <cstdio> // for rename()
 
-#define TICKS_PER_PASS 10;
+#define TICKS_PER_PASS 10
+#define MACHINES_PER_FILE 10
 
 using namespace std;
 
@@ -107,6 +110,9 @@ class TuringMachine {
   long ticks_;
   
 public:
+  // default constructor
+  TuringMachine() {}
+  
   // constructor from description
   TuringMachine(string description) {
     char* c_description;
@@ -115,7 +121,7 @@ public:
     char* end_p;
     num_states_ = strtol(c_description, &end_p, 10);
     state_ = strtol(end_p, &end_p, 10);
-    for(long i=0; i<2*(num_states_-1); i++) {
+    for(long i=0; i<2*(num_states_-1); ++i) {
       delta_.push_back( strtol(end_p, &end_p, 10) );
       delta_.push_back( strtol(end_p, &end_p, 2) );
       delta_.push_back( strtol(end_p, &end_p, 2) );
@@ -164,7 +170,7 @@ public:
     
     
     
-    for(int i=0; i<2*(num_states_-1); i++) {
+    for(int i=0; i<2*(num_states_-1); ++i) {
       delta_.push_back( delta_number % num_states_ );
       delta_number = delta_number / num_states_;
       delta_.push_back( delta_number & 1 );
@@ -194,7 +200,7 @@ public:
   }
   
   void Advance(long ticks) {
-    for(long i=0; i<ticks; i++) {
+    for(long i=0; i<ticks; ++i) {
       if(state_ == 0) break; // halting state
       ++ticks_;
       long base_index = (tape_.Read()?2:1)*(state_-1);
@@ -205,15 +211,62 @@ public:
   }
 };
 
-class ToyBox {
-  
+struct TMBoxen {
+  TuringMachine boxen[MACHINES_PER_FILE];
+  atomic<int> next_machine{0};
 };
 
+// todo variable declarations outside of loops( speedcheck)
+
 int main() {
-  auto k = TuringMachine(64+20736-1);
-  cout << k.repr() << endl;
-  //k.Advance(1000);
-  //cout << k.repr() << endl;
-  //auto j = TuringMachine(k.repr());
-  //cout << j.repr() << endl;
+  long next_file_num = 0;
+  char file_name_buf[1024];
+  char tfile_name_buf[1024];
+  
+  TMBoxen box;
+  for(int i=0; i<10; ++i) { // TODO while(true)
+
+    // Load or create machines
+    sprintf(file_name_buf, "%ld.txt", next_file_num);
+    ifstream in_file(file_name_buf);
+    if(!in_file.good()) {
+      // whoops better generate some machines!      
+      // don't forget to use ~ file
+      for(int j=0; j<MACHINES_PER_FILE; j++) {
+	box.boxen[j] = TuringMachine(next_file_num + j);
+      }
+      
+      next_file_num = 0; // hit the end, so start over
+    }
+    else {
+      string line;
+      for(int loaded = 0; loaded < MACHINES_PER_FILE; ++loaded) {
+	if(!getline(in_file, line)) {
+	  cerr << file_name_buf << " contains too few machines; aborting!" << endl;
+	  exit(1);
+	}
+	// skip lines not beginning with a digit
+	if(line.length() == 0 || !('0' <= line[0] && line[0] <= '9')) { // or isdigit, if you like
+	  --loaded;
+	  continue; 
+	}
+	
+	box.boxen[loaded] = TuringMachine(line);
+      }
+      
+      next_file_num += MACHINES_PER_FILE;
+    }
+    in_file.close(); // close manually because we'll soon be overwriting
+    
+    // Run machines (TODO)
+    
+    // Write machines
+    sprintf(tfile_name_buf, "%ld.txt~", next_file_num);
+    ofstream out_file(tfile_name_buf);
+    for(auto &m : box.boxen) {
+      out_file << m.repr() << endl;
+    }
+    remove(file_name_buf);
+    rename(tfile_name_buf, file_name_buf);
+  }
 }
