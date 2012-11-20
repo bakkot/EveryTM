@@ -216,6 +216,16 @@ struct TMBoxen {
   atomic<int> next_machine{0};
 };
 
+void RunBoxes(TMBoxen& box) {
+  int index;
+  while(true) {
+    index = box.next_machine++;
+    if(index >= MACHINES_PER_FILE) { // speedcheck this in the condition
+      break;
+    }
+    box.boxen[index].Advance(TICKS_PER_PASS);
+  }
+}
 // todo variable declarations outside of loops( speedcheck)
 
 int main() {
@@ -231,7 +241,8 @@ int main() {
     ifstream in_file(file_name_buf);
     if(!in_file.good()) {
       // whoops better generate some machines!      
-      // don't forget to use ~ file
+      
+      cerr << file_name_buf << " doesn't exist." << endl;
       for(int j=0; j<MACHINES_PER_FILE; j++) {
 	box.boxen[j] = TuringMachine(next_file_num + j);
       }
@@ -240,6 +251,7 @@ int main() {
     }
     else {
       string line;
+      //cout << "Reading " << file_name_buf << endl;
       for(int loaded = 0; loaded < MACHINES_PER_FILE; ++loaded) {
 	if(!getline(in_file, line)) {
 	  cerr << file_name_buf << " contains too few machines; aborting!" << endl;
@@ -251,6 +263,7 @@ int main() {
 	  continue; 
 	}
 	
+	//cout << line << endl;
 	box.boxen[loaded] = TuringMachine(line);
       }
       
@@ -259,12 +272,17 @@ int main() {
     in_file.close(); // close manually because we'll soon be overwriting
     
     // Run machines (TODO)
+    //cout << "Running " << file_name_buf << endl;
+    box.next_machine = 0;
+    RunBoxes(box);
     
     // Write machines
-    sprintf(tfile_name_buf, "%ld.txt~", next_file_num);
+    sprintf(tfile_name_buf, "%s~", file_name_buf);
+    //cout << "Saving " << tfile_name_buf << endl;
     ofstream out_file(tfile_name_buf);
     for(auto &m : box.boxen) {
       out_file << m.repr() << endl;
+      //cout << m.repr() << endl;
     }
     remove(file_name_buf);
     rename(tfile_name_buf, file_name_buf);
