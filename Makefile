@@ -1,14 +1,14 @@
 CPP   = g++-4.7
 FLAGS	= -std=c++11 -g -Wall -Werror
-LIBS	= 
+LIBS	= -pthread
 
 
 
 all: everyTM
 
-everTM: everTM.cc
-	$(CPP) $(FLAGS) $(LIBS) everTM.cc -o everTM
+everyTM: everyTM.cc
+	$(CPP) $(FLAGS) $(LIBS) everyTM.cc -o everyTM
 
 clean:
-	rm -f everTM
+	rm -f everyTM
 
